@@ -1,3 +1,4 @@
+import allure
 """
 HTTP 客户端封装
 ==============
@@ -51,62 +52,66 @@ class HttpClient:
     # 核心：发请求的统一入口
     # =========================================================
     def request(self, method: str, path: str, **kwargs) -> dict:
-        """
-        统一请求入口，所有 get/post/put/delete 内部都走这里
-
-        Args:
-            method: HTTP 方法（GET/POST/PUT/DELETE）
-            path: 接口路径（如 /login、/getInfo）
-            **kwargs: 透传给 requests（json、params、data、headers 等）
-
-        Returns:
-            dict: 响应 JSON（自动 .json()）
-        """
+        """统一请求入口"""
         url = f"{self.base_url}{path}"
 
-        # 自动注入 token 到 Authorization 头
         headers = kwargs.pop("headers", {})
         if self.token:
             headers["Authorization"] = f"Bearer {self.token}"
         kwargs["headers"] = headers
-
-        # 设置超时
         kwargs.setdefault("timeout", self.timeout)
 
-        # 请求日志
-        logger.info(f"==> {method} {url}")
-        if kwargs.get("json"):
-            logger.debug(f"    Body: {json_lib.dumps(kwargs['json'], ensure_ascii=False)}")
-        if kwargs.get("params"):
-            logger.debug(f"    Params: {kwargs['params']}")
+        # ===== Allure 步骤标注 =====
+        with allure.step(f"{method} {path}"):
+            # 附加请求详情
+            if kwargs.get("json"):
+                allure.attach(
+                    json_lib.dumps(kwargs["json"], ensure_ascii=False, indent=2),
+                    name="请求体",
+                    attachment_type=allure.attachment_type.JSON,
+                )
+            if kwargs.get("params"):
+                allure.attach(
+                    str(kwargs["params"]),
+                    name="Query 参数",
+                    attachment_type=allure.attachment_type.TEXT,
+                )
 
-        # 发请求
-        try:
-            response = self.session.request(method, url, **kwargs)
-        except requests.exceptions.ConnectionError as e:
-            logger.error(f"连接失败：{url} | {e}")
-            raise
-        except requests.exceptions.Timeout as e:
-            logger.error(f"请求超时：{url} | {e}")
-            raise
+            logger.info(f"==> {method} {url}")
 
-        # 响应日志
-        logger.info(f"<== {response.status_code} {url}")
-        
-        # 解析 JSON
-        try:
-            result = response.json()
-        except ValueError:
-            logger.warning(f"响应不是合法 JSON：{response.text[:200]}")
-            return {"_raw_text": response.text, "_status_code": response.status_code}
+            try:
+                response = self.session.request(method, url, **kwargs)
+            except requests.exceptions.ConnectionError as e:
+                logger.error(f"连接失败：{url} | {e}")
+                raise
+            except requests.exceptions.Timeout as e:
+                logger.error(f"请求超时：{url} | {e}")
+                raise
 
-        logger.debug(f"    响应: {json_lib.dumps(result, ensure_ascii=False)[:300]}")
+            logger.info(f"<== {response.status_code} {url}")
 
-        # 把 HTTP 状态码也塞进结果，方便用例断言
-        result["_status_code"] = response.status_code
+            try:
+                result = response.json()
+            except ValueError:
+                logger.warning(f"响应不是合法 JSON：{response.text[:200]}")
+                allure.attach(
+                    response.text,
+                    name="响应体（非 JSON）",
+                    attachment_type=allure.attachment_type.TEXT,
+                )
+                return {"_raw_text": response.text, "_status_code": response.status_code}
+
+            # 附加响应体到 Allure
+            allure.attach(
+                json_lib.dumps(result, ensure_ascii=False, indent=2),
+                name=f"响应体 (HTTP {response.status_code})",
+                attachment_type=allure.attachment_type.JSON,
+            )
+
+            result["_status_code"] = response.status_code
 
         return result
-
+    
     # =========================================================
     # 便捷方法（业务用例直接用这些）
     # =========================================================
