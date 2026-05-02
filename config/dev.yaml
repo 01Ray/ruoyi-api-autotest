@@ -1,0 +1,38 @@
+# ===============================================================
+# 开发环境配置（本地 RuoYi）
+# ===============================================================
+
+# 当前环境标识（用于日志和报告显示）
+env: dev
+
+# 后端 API 地址
+base_url: http://localhost:8080
+
+# 请求超时（秒）
+timeout: 10
+
+# 测试账号（RuoYi 默认账号）
+admin:
+  username: admin
+  password: admin123
+
+# 测试账号（普通用户，RuoYi 默认）
+ry_user:
+  username: ry
+  password: admin123
+
+# 数据库配置（接口测完查库验证用）
+database:
+  host: localhost
+  port: 3306
+  user: root
+  password: "123456"   # 改成你真实密码
+  database: ry-vue
+  charset: utf8mb4
+
+# Redis 配置（验证 token、缓存用）
+redis:
+  host: localhost
+  port: 6379
+  password: ""
+  db: 0

@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# 虚拟环境
+.venv/
+venv/
+
+# pytest
+.pytest_cache/
+
+# 测试输出
+reports/*
+!reports/.gitkeep
+logs/*
+!logs/.gitkeep
+allure-results/
+allure-report/
+
+# IDE
+.idea/
+*.iml
+
+# 系统
+.DS_Store
+Thumbs.db   

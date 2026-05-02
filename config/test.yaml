@@ -1,0 +1,30 @@
+# ===============================================================
+# 测试环境配置（公司测试服务器，目前占位）
+# ===============================================================
+
+env: test
+
+base_url: http://test-server.example.com:8080
+timeout: 15
+
+admin:
+  username: admin
+  password: admin123
+
+ry_user:
+  username: ry
+  password: admin123
+
+database:
+  host: test-db.example.com
+  port: 3306
+  user: ruoyi_test
+  password: "test_password"
+  database: ry-vue
+  charset: utf8mb4
+
+redis:
+  host: test-redis.example.com
+  port: 6379
+  password: "test_redis_pwd"
+  db: 0
