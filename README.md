@@ -66,3 +66,20 @@ pytest
 ## License
 
 MIT
+
+## 测试报告
+
+本框架使用 Allure 生成可视化测试报告，包含：
+
+- Epic / Feature / Story 三层业务分组
+- 每个用例步骤精确标注（@allure.step）
+- 请求体 / 响应体自动附加
+- 失败时自动归类（Categories）
+- 历史趋势分析（连续运行后可见）
+
+### 生成报告
+
+\`\`\`powershell
+pytest --alluredir=reports/allure-results
+allure serve reports/allure-results
+\`\`\`
