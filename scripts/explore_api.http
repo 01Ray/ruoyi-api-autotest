@@ -1,0 +1,102 @@
+### ==========================================
+### RuoYi 接口探索文件
+### ==========================================
+### 用法：每个 ### 块上方有 "Send Request" 链接，点击发送
+### 响应会显示在右侧分屏
+
+### 全局变量
+@base_url = http://localhost:8080
+@admin_username = admin
+@admin_password = admin123
+
+
+### ==========================================
+### 1. 登录拿 token
+### ==========================================
+# @name login
+POST {{base_url}}/login
+Content-Type: application/json
+
+{
+  "username": "{{admin_username}}",
+  "password": "{{admin_password}}"
+}
+
+
+### 把上面响应里的 token 提取为变量供下面用
+@token = {{login.response.body.token}}
+
+
+### ==========================================
+### 2. 用户列表（默认全量）
+### ==========================================
+GET {{base_url}}/system/user/list
+Authorization: Bearer {{token}}
+
+
+### ==========================================
+### 3. 用户列表（分页）
+### ==========================================
+GET {{base_url}}/system/user/list?pageNum=1&pageSize=5
+Authorization: Bearer {{token}}
+
+
+### ==========================================
+### 4. 模糊搜索（按用户名）
+### ==========================================
+GET {{base_url}}/system/user/list?userName=admin
+Authorization: Bearer {{token}}
+
+
+### ==========================================
+### 5. 用户详情（admin 是 userId=1）
+### ==========================================
+GET {{base_url}}/system/user/1
+Authorization: Bearer {{token}}
+
+
+### ==========================================
+### 6. 新增用户（⚠️ 真的写库）
+### ==========================================
+POST {{base_url}}/system/user
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "userName": "auto_test_user",
+  "nickName": "自动化测试用户",
+  "password": "test123",
+  "phonenumber": "13900000001",
+  "email": "test@example.com",
+  "sex": "0",
+  "status": "0",
+  "deptId": 103,
+  "roleIds": [2],
+  "postIds": [4],
+  "remark": "自动化创建"
+}
+
+
+### ==========================================
+### 7. 查询刚建的用户（拿到 userId）
+### ==========================================
+# @name findAutoUser
+GET {{base_url}}/system/user/list?userName=auto_test_user
+Authorization: Bearer {{token}}
+
+
+### 提取刚建用户的 userId
+@auto_user_id = {{findAutoUser.response.body.rows[0].userId}}
+
+
+### ==========================================
+### 8. 删除刚建的用户
+### ==========================================
+DELETE {{base_url}}/system/user/{{auto_user_id}}
+Authorization: Bearer {{token}}
+
+
+### ==========================================
+### 9. 不带 token 调受保护接口（反向用例）
+### ==========================================
+GET {{base_url}}/system/user/list
