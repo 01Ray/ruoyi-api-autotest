@@ -1,0 +1,144 @@
+### ==========================================
+### RuoYi 角色管理接口探索
+### ==========================================
+
+@base_url = http://localhost:8080
+
+### 1. 登录拿 token
+# @name login
+POST {{base_url}}/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "admin123"
+}
+
+###
+@token = {{login.response.body.token}}
+
+
+### ==========================================
+### 2. 角色列表（默认）
+### ==========================================
+GET {{base_url}}/system/role/list
+Authorization: Bearer {{token}}
+
+
+### ==========================================
+### 3. 角色列表（按状态）
+### ==========================================
+GET {{base_url}}/system/role/list?status=0
+Authorization: Bearer {{token}}
+
+
+### ==========================================
+### 4. 角色列表（模糊搜索 - 按角色名）
+### ==========================================
+GET {{base_url}}/system/role/list?roleName=管理员
+Authorization: Bearer {{token}}
+
+
+### ==========================================
+### 5. 角色详情（roleId=1 = 超级管理员）
+### ==========================================
+GET {{base_url}}/system/role/1
+Authorization: Bearer {{token}}
+
+
+### ==========================================
+### 6. 角色详情（roleId=2 = 普通角色）
+### ==========================================
+GET {{base_url}}/system/role/2
+Authorization: Bearer {{token}}
+
+
+### ==========================================
+### 7. 新增角色
+### ==========================================
+POST {{base_url}}/system/role
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "roleName": "auto_test_role",
+  "roleKey": "autoTestRole",
+  "roleSort": 99,
+  "status": "0",
+  "menuCheckStrictly": true,
+  "deptCheckStrictly": true,
+  "remark": "自动化创建，可删除",
+  "menuIds": [1, 100, 1000, 1001]
+}
+
+
+### ==========================================
+### 8. 查询刚建的角色（拿 roleId）
+### ==========================================
+# @name findAutoRole
+GET {{base_url}}/system/role/list?roleName=auto_test_role
+Authorization: Bearer {{token}}
+
+###
+@auto_role_id = {{findAutoRole.response.body.rows[0].roleId}}
+
+
+### ==========================================
+### 9. 修改角色
+### ==========================================
+PUT {{base_url}}/system/role
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "roleId": {{auto_role_id}},
+  "roleName": "auto_test_role_modified",
+  "roleKey": "autoTestRole",
+  "roleSort": 99,
+  "status": "0",
+  "menuCheckStrictly": true,
+  "deptCheckStrictly": true,
+  "remark": "已修改",
+  "menuIds": [1, 100, 1000]
+}
+
+
+### ==========================================
+### 10. 修改角色状态（停用）
+### ==========================================
+PUT {{base_url}}/system/role/changeStatus
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "roleId": {{auto_role_id}},
+  "status": "1"
+}
+
+
+### ==========================================
+### 11. 删除角色
+### ==========================================
+DELETE {{base_url}}/system/role/{{auto_role_id}}
+Authorization: Bearer {{token}}
+
+
+### ==========================================
+### 12. 删除超级管理员（应该被禁止）
+### ==========================================
+DELETE {{base_url}}/system/role/1
+Authorization: Bearer {{token}}
+
+
+### ==========================================
+### 13. 角色已分配的用户列表（重要场景）
+### ==========================================
+GET {{base_url}}/system/role/authUser/allocatedList?roleId=2
+Authorization: Bearer {{token}}
+
+
+### ==========================================
+### 14. 角色未分配的用户列表
+### ==========================================
+GET {{base_url}}/system/role/authUser/unallocatedList?roleId=2
+Authorization: Bearer {{token}}
