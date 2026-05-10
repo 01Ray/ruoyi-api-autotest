@@ -50,3 +50,19 @@ def auth_client(env_config):
     client = HttpClient()
     client.login(env_config.admin.username, env_config.admin.password)
     return client
+
+
+@pytest.fixture(scope="session")
+def db_client():
+    """
+    数据库客户端（session 级共享）
+    
+    用例可以这样用：
+        def test_xxx(self, admin_client, db_client):
+            admin_client.post(...)
+            user = db_client.fetch_one("SELECT ... WHERE id = %s", (1,))
+            assert user is not None
+    """
+    from common.db import db
+    yield db
+    db.close()

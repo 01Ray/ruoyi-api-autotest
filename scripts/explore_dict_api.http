@@ -1,0 +1,89 @@
+### ==========================================
+### RuoYi 字典管理接口探索
+### ==========================================
+
+@base_url = http://localhost:8080
+
+### 1. 登录拿 token
+# @name login
+POST {{base_url}}/login
+Content-Type: application/json
+
+{"username": "admin", "password": "admin123"}
+
+###
+@token = {{login.response.body.token}}
+
+
+### ==========================================
+### 字典类型相关
+### ==========================================
+
+### 2. 字典类型列表
+GET {{base_url}}/system/dict/type/list
+Authorization: Bearer {{token}}
+
+
+### 3. 字典类型详情（dictId=1）
+GET {{base_url}}/system/dict/type/1
+Authorization: Bearer {{token}}
+
+
+### 4. 按字典类型 type 字段获取数据（前端下拉框场景）
+GET {{base_url}}/system/dict/data/type/sys_user_sex
+Authorization: Bearer {{token}}
+
+
+### 5. 字典数据列表（按 dictType 筛选）
+GET {{base_url}}/system/dict/data/list?dictType=sys_user_sex
+Authorization: Bearer {{token}}
+
+
+### 6. 新增字典类型
+POST {{base_url}}/system/dict/type
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "dictName": "测试字典类型",
+  "dictType": "test_dict_auto",
+  "status": "0",
+  "remark": "自动化创建"
+}
+
+
+### 7. 查刚建的字典类型
+# @name findAutoDict
+GET {{base_url}}/system/dict/type/list?dictType=test_dict_auto
+Authorization: Bearer {{token}}
+
+###
+@auto_dict_id = {{findAutoDict.response.body.rows[0].dictId}}
+
+
+### 8. 删除字典类型
+DELETE {{base_url}}/system/dict/type/{{auto_dict_id}}
+Authorization: Bearer {{token}}
+
+
+### ==========================================
+### 字典数据相关（属于某个 dictType）
+### ==========================================
+
+### 9. 新增字典数据
+POST {{base_url}}/system/dict/data
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "dictType": "sys_user_sex",
+  "dictLabel": "测试选项",
+  "dictValue": "99",
+  "dictSort": 99,
+  "status": "0"
+}
+
+
+### 10. 缓存刷新
+DELETE {{base_url}}/system/dict/type/refreshCache
+Authorization: Bearer {{token}}

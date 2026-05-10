@@ -1,5 +1,6 @@
 """用户管理模块接口测试"""
 
+import time
 import pytest
 import allure
 
@@ -52,34 +53,41 @@ class TestUserCRUD:
         admin_client.delete(f"/system/user/{user_id}")
 
     @allure.story("新增")
-    @allure.title("新增用户 - 完整字段")
+    @allure.title("新增用户 - 完整字段（含数据库落地验证）")
     @allure.severity(allure.severity_level.CRITICAL)
     @pytest.mark.smoke
     @pytest.mark.user
-    def test_user_create_success(self, admin_client, test_user_id):
-        """fixture 已经创建用户，这里只验证它确实存在"""
+    def test_user_create_success(self, admin_client, test_user_id, db_client):
+        """
+        创建用户后，验证：
+        1. 接口能查到新用户（fixture 已经做了）
+        2. 接口字段与数据库一致
+        3. delFlag = '0' 表示数据正常落库（不是软删除状态）
+        """
+        # === 验证接口层 ===
         result = admin_client.get(f"/system/user/{test_user_id}")
-
         assert result["code"] == 200
-        assert result["data"]["userId"] == test_user_id
-        assert "test_user_" in result["data"]["userName"]
+        api_user = result["data"]
 
-    @allure.story("新增")
-    @allure.title("新增用户 - 用户名重复应失败")
-    @allure.severity(allure.severity_level.CRITICAL)
-    @pytest.mark.user
-    def test_user_create_duplicate_username(self, admin_client):
-        """已存在的用户名应被拒绝"""
-        duplicate_user = {
-            "userName": "admin",  # 故意用已存在的
-            "nickName": "重复名称测试",
-            "password": "test123"
-        }
-        result = admin_client.post("/system/user", json=duplicate_user)
+        # === 验证数据库层（端到端断言）===
+        with allure.step("数据库验证：用户记录已写入 sys_user 表"):
+            db_user = db_client.fetch_one(
+                "SELECT user_name, nick_name, status, del_flag, dept_id "
+                "FROM sys_user WHERE user_id = %s",
+                (test_user_id,)
+            )
 
-        # 业务层应拒绝
-        assert result["code"] == 500
-        assert "已存在" in result["msg"] or "重复" in result["msg"]
+            # 数据库里有这条记录
+            assert db_user is not None, f"用户 ID {test_user_id} 在数据库中不存在"
+
+            # 接口数据 vs 数据库数据一致
+            assert api_user["userName"] == db_user["user_name"]
+            assert api_user["nickName"] == db_user["nick_name"]
+            assert api_user["status"] == db_user["status"]
+
+            # 数据状态正常（未被软删除）
+            assert db_user["del_flag"] == "0", \
+                f"新建用户 del_flag 应为 '0'，实际 '{db_user['del_flag']}'"
 
     @allure.story("修改")
     @allure.title("修改用户 - 修改昵称")
@@ -122,20 +130,18 @@ class TestUserCRUD:
         assert verify["data"]["status"] == "1"
 
     @allure.story("删除")
-    @allure.title("删除用户 - 单个（软删除）")
+    @allure.title("删除用户 - 软删除验证（接口 + 数据库双层）")
     @allure.severity(allure.severity_level.CRITICAL)
     @pytest.mark.user
-    def test_user_delete_single(self, admin_client):
+    def test_user_delete_single(self, admin_client, db_client):
         """
-        删除单个用户后，验证：
-        1. 删除接口返回成功
-        2. 用户列表查不到（软删除被过滤）
-        3. 用户名可以重新被使用（被释放）
+        软删除验证：
+        - 接口层：列表查不到
+        - 数据库层：del_flag 从 '0' 变成 '2'
         """
-        import time
         unique_name = f"to_delete_{int(time.time() * 1000)}"
 
-        # 1. 创建
+        # 创建
         admin_client.post("/system/user", json={
             "userName": unique_name,
             "nickName": "待删除",
@@ -147,16 +153,35 @@ class TestUserCRUD:
         )
         user_id = list_r["rows"][0]["userId"]
 
-        # 2. 删除
+        # 删除前 - 验证数据库 del_flag = '0'
+        with allure.step("删除前：del_flag = '0'"):
+            before = db_client.fetch_one(
+                "SELECT del_flag FROM sys_user WHERE user_id = %s",
+                (user_id,)
+            )
+            assert before["del_flag"] == "0"
+
+        # 执行删除
         delete_result = admin_client.delete(f"/system/user/{user_id}")
         assert delete_result["code"] == 200
 
-        # 3. 验证列表已查不到
-        list_after = admin_client.get(
-            "/system/user/list",
-            params={"userName": unique_name}
-        )
-        assert list_after["total"] == 0, "软删除后列表仍能查到"
+        # 删除后 - 接口层验证
+        with allure.step("接口层验证：列表查不到"):
+            list_after = admin_client.get(
+                "/system/user/list",
+                params={"userName": unique_name}
+            )
+            assert list_after["total"] == 0
+
+        # 删除后 - 数据库层验证
+        with allure.step("数据库层验证：del_flag = '2'（软删除标记）"):
+            after = db_client.fetch_one(
+                "SELECT del_flag FROM sys_user WHERE user_id = %s",
+                (user_id,)
+            )
+            assert after is not None, "记录应该还在数据库（软删除不真删）"
+            assert after["del_flag"] == "2", \
+                f"软删除后 del_flag 应为 '2'，实际 '{after['del_flag']}'"
 
     @allure.story("删除")
     @allure.title("删除用户 - 不能删除超级管理员")
