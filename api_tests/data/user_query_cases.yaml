@@ -1,0 +1,92 @@
+# ===============================================================
+# 用户查询接口数据驱动用例
+# ===============================================================
+
+- case_id: USER_LIST_001
+  title: 用户列表 - 默认查询
+  description: 不传任何参数查询用户列表，应返回全部
+  severity: critical
+  marks: [smoke, user]
+  request:
+    method: GET
+    path: /system/user/list
+    params: {}
+  expected:
+    status_code: 200
+    code: 200
+    asserts:
+      - {jsonpath: "$.total", op: ">=", value: 1}
+
+- case_id: USER_LIST_002
+  title: 用户列表 - 按状态正常筛选
+  description: status=0 只看启用的用户
+  severity: normal
+  marks: [user]
+  request:
+    method: GET
+    path: /system/user/list
+    params: {status: "0"}
+  expected:
+    status_code: 200
+    code: 200
+    asserts:
+      - {jsonpath: "$.rows[0].status", op: "==", value: "0"}    # 验证返回的真是 status=0 的
+
+- case_id: USER_LIST_003
+  title: 用户列表 - 模糊搜索"admin"
+  description: 按 userName 搜索admin
+  severity: normal
+  marks: [user]
+  request:
+    method: GET
+    path: /system/user/list
+    params: {userName: "admin"}
+  expected:
+    status_code: 200
+    code: 200
+    asserts:
+      - {jsonpath: "$.total", op: ">=", value: 1}
+      - {jsonpath: "$.rows[0].userName", op: "==", value: "admin"}
+
+- case_id: USER_LIST_004
+  title: 用户列表 - 分页 pageSize=1
+  description: 验证分页参数生效
+  severity: normal
+  marks: [user]
+  request:
+    method: GET
+    path: /system/user/list
+    params: {pageNum: 1, pageSize: 1}
+  expected:
+    status_code: 200
+    code: 200
+
+- case_id: USER_DETAIL_001
+  title: 用户详情 - admin用户
+  description: userId=1 返回admin完整信息
+  severity: critical
+  marks: [smoke, user]
+  request:
+    method: GET
+    path: /system/user/1
+  expected:
+    status_code: 200
+    code: 200
+    asserts:
+      - {jsonpath: "$.data.userId", op: "==", value: 1}
+      - {jsonpath: "$.data.userName", op: "==", value: "admin"}
+      - {jsonpath: "$.data.nickName", op: "==", value: "若依"}
+      - {jsonpath: "$.data.admin", op: "==", value: true}
+
+
+- case_id: USER_DETAIL_002
+  title: 用户详情 - 不存在的用户 ID
+  description: 查询不存在的用户userID，返回code 500
+  severity: normal
+  marks: [user]
+  request:
+    method: GET
+    path: /system/user/99999
+  expected:
+    status_code: 200
+    code: 500

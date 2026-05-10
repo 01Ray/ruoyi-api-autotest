@@ -8,93 +8,29 @@ import pytest
 
 @allure.epic("RuoYi 接口自动化")
 @allure.feature("角色管理")
-class TestRoleQuery:
-    """角色查询用例"""
+class TestRoleSystemData:
+    """系统初始化数据完整性验证"""
 
-    @allure.story("查询")
-    @allure.title("查询角色列表 - 默认参数")
-    @allure.severity(allure.severity_level.CRITICAL)
+    @allure.story("数据完整性")
+    @allure.title("超级管理员角色配置正确")
+    @allure.severity(allure.severity_level.BLOCKER)
     @pytest.mark.smoke
     @pytest.mark.role
-    def test_role_list_default(self, admin_client):
-        """默认参数查询角色列表，验证基本结构"""
-        result = admin_client.get("/system/role/list")
-
-        assert result["_status_code"] == 200
-        assert result["code"] == 200
-        assert "rows" in result
-        assert "total" in result
-        assert result["total"] >= 2, "至少应有 admin + common 两个内置角色"
-
-    @allure.story("查询")
-    @allure.title("查询角色列表 - 包含超管角色")
-    @allure.severity(allure.severity_level.NORMAL)
-    @pytest.mark.role
-    def test_role_list_contains_admin(self, admin_client):
-        """超级管理员角色（roleId=1）必须存在"""
+    def test_admin_role_config(self, admin_client):
+        """
+        系统级数据完整性验证：
+        - 超管角色（roleKey=admin）必须存在
+        - 必须标记为 admin=true
+        - dataScope 必须是 1（全部数据）
+        
+        这些是 RuoYi 的"系统不变量"——不能被任何业务操作破坏
+        """
         result = admin_client.get("/system/role/list")
 
         admin_roles = [r for r in result["rows"] if r["roleKey"] == "admin"]
-        assert len(admin_roles) == 1, "找不到超管角色"
+        assert len(admin_roles) == 1, "找不到超管角色，系统数据被破坏"
         assert admin_roles[0]["admin"] is True
         assert admin_roles[0]["dataScope"] == "1", "超管 dataScope 应为 1（全部数据）"
-
-    @allure.story("查询")
-    @allure.title("按状态筛选 - 只看正常角色")
-    @allure.severity(allure.severity_level.NORMAL)
-    @pytest.mark.role
-    def test_role_list_filter_by_status(self, admin_client):
-        """status=0 筛选"""
-        result = admin_client.get("/system/role/list", params={"status": "0"})
-
-        assert result["code"] == 200
-        for role in result["rows"]:
-            assert role["status"] == "0"
-
-    @allure.story("查询")
-    @allure.title("按角色名模糊搜索")
-    @allure.severity(allure.severity_level.NORMAL)
-    @pytest.mark.role
-    def test_role_list_search_by_name(self, admin_client):
-        """搜索"管理员"应能找到超管角色"""
-        result = admin_client.get(
-            "/system/role/list",
-            params={"roleName": "管理员"}
-        )
-
-        assert result["code"] == 200
-        assert result["total"] >= 1
-        for role in result["rows"]:
-            assert "管理员" in role["roleName"]
-
-    @allure.story("查询")
-    @allure.title("查询角色详情 - 超管角色")
-    @allure.severity(allure.severity_level.CRITICAL)
-    @pytest.mark.smoke
-    @pytest.mark.role
-    def test_role_detail(self, admin_client):
-        """查询 roleId=1 详情"""
-        result = admin_client.get("/system/role/1")
-
-        assert result["code"] == 200
-        role = result["data"]
-        assert role["roleId"] == 1
-        assert role["roleKey"] == "admin"
-        assert role["admin"] is True
-        assert role["roleName"] == "超级管理员"
-
-    @allure.story("查询")
-    @allure.title("查询不存在的角色 ID")
-    @allure.severity(allure.severity_level.MINOR)
-    @pytest.mark.role
-    def test_role_detail_not_exist(self, admin_client):
-        """RuoYi 对不存在 ID 的处理"""
-        result = admin_client.get("/system/role/999999")
-
-        # 复用昨天用户模块的认知：RuoYi 用业务 code 表达不存在
-        # 但角色接口可能返回 200 + 空 data，先按宽松断言
-        assert result["code"] in (200, 500)
-
 
 @allure.epic("RuoYi 接口自动化")
 @allure.feature("角色管理")

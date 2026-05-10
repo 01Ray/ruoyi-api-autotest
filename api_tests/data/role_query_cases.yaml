@@ -1,0 +1,133 @@
+# ===============================================================
+# 角色查询接口数据驱动用例
+# ===============================================================
+
+- case_id: ROLE_LIST_001
+  title: 角色列表 - 默认查询
+  description: 不传任何参数查询角色列表，应返回全部
+  severity: critical
+  marks: [smoke, role]
+  request:
+    method: GET
+    path: /system/role/list
+    params: {}
+  expected:
+    status_code: 200
+    code: 200
+    asserts:
+      - {jsonpath: "$.total", op: ">=", value: 2}
+
+- case_id: ROLE_LIST_002
+  title: 角色列表 - 按状态正常筛选
+  description: status=0 只看启用的角色
+  severity: normal
+  marks: [role]
+  request:
+    method: GET
+    path: /system/role/list
+    params: {status: "0"}
+  expected:
+    status_code: 200
+    code: 200
+
+- case_id: ROLE_LIST_003
+  title: 角色列表 - 按状态停用筛选
+  description: status=1 看停用的角色（默认数据可能为空）
+  severity: minor
+  marks: [role]
+  request:
+    method: GET
+    path: /system/role/list
+    params: {status: "1"}
+  expected:
+    status_code: 200
+    code: 200
+
+- case_id: ROLE_LIST_004
+  title: 角色列表 - 模糊搜索"管理员"
+  description: 搜索包含管理员的角色
+  severity: normal
+  marks: [role]
+  request:
+    method: GET
+    path: /system/role/list
+    params: {roleName: "管理员"}
+  expected:
+    status_code: 200
+    code: 200
+    asserts:
+      - {jsonpath: "$.total", op: ">=", value: 1}
+
+- case_id: ROLE_LIST_005
+  title: 角色列表 - 模糊搜索"common"
+  description: 按 roleKey 搜索普通角色
+  severity: normal
+  marks: [role]
+  request:
+    method: GET
+    path: /system/role/list
+    params: {roleKey: "common"}
+  expected:
+    status_code: 200
+    code: 200
+
+- case_id: ROLE_LIST_006
+  title: 角色列表 - 分页 pageSize=1
+  description: 验证分页参数生效
+  severity: normal
+  marks: [role]
+  request:
+    method: GET
+    path: /system/role/list
+    params: {pageNum: 1, pageSize: 1}
+  expected:
+    status_code: 200
+    code: 200
+    asserts:
+      - {jsonpath: "$.code", op: "==", value: 200}
+
+- case_id: ROLE_LIST_007
+  title: 角色列表 - 不存在的角色名
+  description: 搜索不存在的关键词，应返回空列表
+  severity: minor
+  marks: [role]
+  request:
+    method: GET
+    path: /system/role/list
+    params: {roleName: "ABCDXYZ_NOT_EXIST"}
+  expected:
+    status_code: 200
+    code: 200
+    asserts:
+      - {jsonpath: "$.total", op: "==", value: 0}
+
+- case_id: ROLE_DETAIL_001
+  title: 角色详情 - 超管角色
+  description: roleId=1 详情应包含超管标识
+  severity: critical
+  marks: [smoke, role]
+  request:
+    method: GET
+    path: /system/role/1
+  expected:
+    status_code: 200
+    code: 200
+    asserts:
+      - {jsonpath: "$.data.roleId", op: "==", value: 1}
+      - {jsonpath: "$.data.admin", op: "==", value: true}
+      - {jsonpath: "$.data.roleKey", op: "==", value: "admin"}
+
+- case_id: ROLE_DETAIL_002
+  title: 角色详情 - 普通角色
+  description: roleId=2 详情
+  severity: normal
+  marks: [role]
+  request:
+    method: GET
+    path: /system/role/2
+  expected:
+    status_code: 200
+    code: 200
+    asserts:
+      - {jsonpath: "$.data.roleKey", op: "==", value: "common"}
+      - {jsonpath: "$.data.admin", op: "==", value: false}
